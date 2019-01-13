@@ -4,3 +4,7 @@
 __pycache__/
 
 unity-environment\.log
+
+Banana_Linux/
+
+Navigation\.py

@@ -28,6 +28,9 @@ class ExperienceReplayer:
             if prio is None:
                 prio = self.def_prio
             self.prio_memory.append(float(prio))
+        else:
+            if prio is not None:
+                print("ExperienceReplayer warning: priority value specified but current ExperienceReplayer object has not been initialsed to use priority, ignoring.")
 
     def draw(self, number):
         if number>len(self.memory):
@@ -35,9 +38,9 @@ class ExperienceReplayer:
         if self.use_prio:
             if self.norm_prio is False:
                 self.compute_norm_prio_array()
-            return np.random.choice(self.memory, number, False, self.norm_prio_array)
+            return [self.memory[el] for el in np.random.choice(len(self.memory), size=number, replace=False, p=self.norm_prio_array)]
         else:
-            return np.random.choice(self.memory, number, False)
+            return [self.memory[el] for el in np.random.choice(len(self.memory), size=number, replace=False)]
 
     def compute_norm_prio_array(self):
         self.norm_prio_array = np.array(self.prio_memory)

@@ -1,6 +1,7 @@
 from torch import nn
 from torch import optim
 import torch.nn.functional as F
+import torch
 
 def is_iterable(element):
     try:
@@ -51,7 +52,16 @@ class PyTorchBaseNetwork(nn.Module):
             print("Convolutional Layers not supported for the moment")
 
     def forward(self, x):
-        """ Forward pass through the network, returns the output logits """
+        """ Forward pass through the network, returns the output logits
+
+        :param x(torch.FloatTensor): input or set of inputs to be processed by the network
+        """
+        if not isinstance(x, torch.Tensor):
+            raise TypeError("x should be a Tensor but is of type " + str(type(x)))
+
+        if not isinstance(x, torch.FloatTensor):
+            raise TypeError("x should be a Tensor of Float but is of type " + str(x.type()))
+
         for fc_layer in self.fc_layers:
             x = fc_layer(x)
             x = F.relu(x)

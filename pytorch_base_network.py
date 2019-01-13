@@ -69,8 +69,15 @@ class PyTorchBaseNetwork(nn.Module):
         #x = F.softmax(x, dim=1)
         return x
 
+    def forward_np(self, x_np):
+        """ Forward pass through the network, returns the output logits. input is a numpy array
 
-
+        :param x(torch.FloatTensor): input or set of inputs to be processed by the network
+        """
+        x=torch.tensor(x_np).float()
+        x = self.forward(x)
+        x_np = x.detach().numpy()
+        return x_np
 
 
 

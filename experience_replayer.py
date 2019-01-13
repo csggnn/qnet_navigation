@@ -24,7 +24,7 @@ class ExperienceReplayer:
             self.def_prio = float(self.def_prio)
         self.prio_epsilon = epsilon
         self.prio_memory = None
-        self.norm_prio_array = np.array(float)
+        self.norm_prio_array = np.array(None, dtype=float)
         self.norm_prio = None
         if self.use_prio:
             # self.prio_memory values are 1 to 1 associated with self.memory values

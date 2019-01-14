@@ -15,7 +15,7 @@ class QAgent:
 
     """
 
-    def __init__(self, state_space, action_space,  mem_size = 1000):
+    def __init__(self, state_space, action_space, layers=[100, 100], mem_size = 1000):
         self.mem = ExperienceReplayer(mem_size)
         self.gamma = 0.95
         self.state_space = state_space
@@ -23,23 +23,23 @@ class QAgent:
         # The local network is updated at every steps, but its evolution is not immediately used in selecting actions.
         # In Double DQN, the local network is also used to extract action values used for updates, although the actual
         # actions are selected depending on the target network.
-        self.qnet_local = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = [100,100], output_shape=(action_space,))
+        self.qnet_local = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = layers, output_shape=(action_space,))
         # The agent inspects the environment using the target network to decide on its actions. the target network also
         # selects the best action in each state for the pourpose of updating the local network.
-        self.qnet_target = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = [100,100], output_shape=(action_space,))
+        self.qnet_target = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = layers, output_shape=(action_space,))
         # As it is beneficial to have a target network which is different from (delayed w.r.t.) the local network, why
         # is it okay to have them identical or almost identical just after target network gets updated?
         # I am introducing a 3rd network, which acts as a buffer between local and target network.
         # every N learn calls, delayer weigths will be moved to the target network and then local weigths will be copied
         # over to delayer.
         # there will thus always be a distance of N to 2*N update calls between qnet_local and qnet_target
-        self.qnet_delayer = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = [100,100], output_shape=(action_space,))
+        self.qnet_delayer = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = layers, output_shape=(action_space,))
 
         self.optimizer = optim.Adam(self.qnet_local.parameters(), lr=0.003)
 
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
 
-    def act(self, state, eps, env, env_step_fun):
+    def act(self, env, eps):
         """ Act on provided environment.
 
         The agent selects an action according to epsilon greedy policy using its local network. It then performs the
@@ -57,8 +57,9 @@ class QAgent:
                 standardized format.
 
         """
+        state = env.get_state()
         action=self.select_action(state, eps)
-        next_state, reward, done = env_step_fun(env, action)
+        next_state, reward, done = env.step(action)
         self.mem.store(self.experience(state, action, reward, next_state, done))
         return self.experience(state, action, reward, next_state, done)
 
@@ -78,6 +79,9 @@ class QAgent:
         :return:
         """
         experiences = self.mem.draw(batch_size)
+
+        if experiences is None:
+            return None
 
         next_states = torch.tensor([exp.next_state for exp in experiences])
         rewards = torch.tensor([exp.reward for exp in experiences])
@@ -109,12 +113,5 @@ class QAgent:
 
 
 
-def banana_env_step(env, action):
-    """ function for performing env_step on a BananaCollection environment and getting output in a default format"""
-    brain_name = 'BananaBrain'
-    env_info = env.step(action)[brain_name]
-    reward= env_info.rewards[0]
-    next_state = env_info.vector_observations[0]
-    done = env_info.local_done[0]
-    return (next_state, reward,  done)
+
 

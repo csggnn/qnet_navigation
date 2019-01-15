@@ -87,27 +87,29 @@ class QAgent:
         rewards = torch.tensor([exp.reward for exp in experiences])
         states = torch.tensor([exp.state for exp in experiences])
         actions = torch.tensor([exp.action for exp in experiences])
+        dones = torch.tensor([exp.done for exp in experiences])
 
         # Double DQN : find max in a network, pick value from the other
 
         best_actions = np.argmax(self.qnet_local.forward(next_states.float()).detach(), 1).unsqueeze(1)
         best_actvalues = self.qnet_target.forward(next_states.float()).detach().gather(1, best_actions)
 
-        target = rewards + self.gamma * (best_actvalues)
+        target = rewards + self.gamma * (best_actvalues) *(1.0-dones.float())
         current = self.qnet_local.forward(states.float()).gather(1, actions.unsqueeze(1))
 
         loss = nn.MSELoss()
         loss_curr = loss(current, target)
+        self.optimizer.zero_grad()
         loss_curr.backward()
         self.optimizer.step()
 
-        return loss
+        return loss_curr
 
 
     def update_target(self):
 
-        self.qnet_delayer.load_state_dict(self.qnet_local.state_dict())
-        self.qnet_target.load_state_dict(self.qnet_delayer.state_dict())
+        self.qnet_target.load_state_dict(self.qnet_local.state_dict())
+        #self.qnet_target.load_state_dict(self.qnet_delayer.state_dict())
 
 
 

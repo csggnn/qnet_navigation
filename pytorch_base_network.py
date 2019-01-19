@@ -93,13 +93,20 @@ class PyTorchBaseNetwork(nn.Module):
         x = self.out_layer(x)
         return x
 
+    def forward_np(self, x_np):
+        """ Forward pass through the network, returns the output logits. input is a numpy array
 
+        :param x(torch.FloatTensor): input or set of inputs to be processed by the network
+        """
+        x=torch.tensor(x_np).float()
+        x = self.forward(x)
+        x_np = x.detach().numpy()
+        return x_np
 
     def save_model(self, checkpoint_file, description=None):
 
         tosave = {"version": self.version, "pars": self.pars._asdict(),
                   "state_dict": self.state_dict(), "description": description}
         torch.save(tosave, checkpoint_file)
-
 
 

@@ -1,19 +1,26 @@
-import time
+from collections import deque
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 from banana_env import BananaEnv
 from cart_pole_env import CartPoleEnv
-
 from q_agent import QAgent
 
+plt.ion()
+fig = plt.figure()
+ax = fig.add_subplot(111)
 
-env_sel = "CartPole"
+env_sel = "Banana"
 
-if env_sel=="Banana":
+if env_sel == "Banana":
     env = BananaEnv()
-elif env_sel =="CartPole":
+    pars = {"layers": [256, 256, 128], "mem_size": 5000, "train_episodes": 4000, "max_ep_len":1000, "update_every":20}
+elif env_sel == "CartPole":
     env = CartPoleEnv()
+    pars = {"layers": [128, 128, 64], "mem_size": 2000, "train_episodes": 10000, "max_ep_len":500,"update_every":20}
 else:
-    raise ValueError("specified environment "+ env_sel + " does not match any available environment")
+    raise ValueError("specified environment " + env_sel + " does not match any available environment")
 env.reset()
 
 # number of actions
@@ -21,39 +28,58 @@ print('Number of actions:', env.get_action_space_size())
 # examine the state space
 print('States look like:', env.get_state())
 print('States have length:', env.get_state_space_size())
-#[50,20,10]
-agent = QAgent(state_space= env.get_state_space_size(), action_space=env.get_action_space_size(), layers=[256,64],
-               mem_size=500)
+# [50,20,10]
+agent = QAgent(state_space=env.get_state_space_size(), action_space=env.get_action_space_size(), layers=pars["layers"],
+               mem_size=pars["mem_size"], use_delayer=True)
 env.reset()
 curr_score = 0
+score_window = deque(maxlen=100)  # last 100 scores
 score_list = []
 running_score = 0
-start_eps=0.3
-eps=start_eps
-eps_decrease=0.97
-test_episodes = 3000
-for episode in range(test_episodes):
-    if episode%10 == 0:
-        eps*=eps_decrease
+eps_start = 1.0
+eps_decay = 0.998
+eps_end = 0.001
+eps = eps_start
+max_ep_len = pars["max_ep_len"]
+train_episodes = pars["train_episodes"]
+update_every = pars["update_every"]
+for episode in range(train_episodes):
+    eps = max(eps * eps_decay, eps_end)
     env.reset()
-    done=False
-    curr_score=0
-    act_i=0
-    while not done:
-        act_i=act_i+1
+    done = False
+    curr_score = 0
+    act_i = 0
+    for i in range(max_ep_len):
+        act_i = act_i + 1
         exp = agent.act(env, eps)
         curr_score = curr_score + exp.reward
-        done =exp.done
-        if act_i%4 ==0:
+        if exp.done:
+            break
+        if act_i % 4 == 0:
             agent.learn(64)
-    running_score = 0.95*running_score+0.05*curr_score
-    if episode%50==0:
-        print("Episode "+ str(episode) + ". Eps = "+str(eps) +",  last score: " + str(curr_score) + ", running_score: " + str(running_score))
-    if episode%10==0:
-        agent.update_target()
-    if episode%500 == 0:
-        agent.save_checkpoint(target_checkpoint="qnet_"+env_sel+"_target_episode_"+str(episode)+".ckp")
+    score_list.append(curr_score)
+    score_window.append(curr_score)
+    if episode % 100 == 0:
+        print("Episode " + str(episode) + ". Eps = " + str(eps) + ",  mean_score: " + str(np.mean(score_window)))
+        ax.clear()
+        ax.plot(np.arange(len(score_list)), score_list)
+        plt.ylabel('Score')
+        plt.xlabel('Episode #')
+        plt.draw()
+        plt.pause(.001)
 
-agent.save_checkpoint(target_checkpoint="qnet_"+env_sel+"_target_final.ckp")
+    if episode % update_every == 0:
+        agent.update_target()
+    if episode % 2000 == 0:
+        agent.save_checkpoint(target_checkpoint="qnet_" + env_sel + "_target_episode_" + str(episode) + ".ckp")
+
+
+
+agent.save_checkpoint(target_checkpoint="qnet_" + env_sel + "_target_final.ckp")
+plt.plot(np.arange(len(score_list)), score_list)
+plt.ylabel('Score')
+plt.xlabel('Episode #')
+plt.draw()
+plt.pause(.001)
 
 print("done")

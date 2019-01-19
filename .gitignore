@@ -10,3 +10,5 @@ Banana_Linux/
 Navigation\.py
 
 mod_test\.ckp
+
+*.ckp

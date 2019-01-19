@@ -111,7 +111,21 @@ class QAgent:
         self.qnet_target.load_state_dict(self.qnet_local.state_dict())
         #self.qnet_target.load_state_dict(self.qnet_delayer.state_dict())
 
+    def save_checkpoint(self,  target_checkpoint, local_checkpoint = None, delayer_checkpoint=None):
+        self.qnet_target.save_model(target_checkpoint, "q_agent_target_net")
+        if local_checkpoint is not None:
+            self.qnet_local.save_model(local_checkpoint, "q_agent_local_net")
+        if delayer_checkpoint is not None:
+            self.qnet_delayer.save_model(delayer_checkpoint, "q_agent_delayer_net")
 
+    def load_checkpoint(self, target_checkpoint, local_checkpoint = None, delayer_checkpoint=None):
+        if local_checkpoint is None:
+            local_checkpoint=target_checkpoint
+        if delayer_checkpoint is None:
+            delayer_checkpoint=local_checkpoint
+        self.qnet_target = PyTorchBaseNetwork(target_checkpoint)
+        self.qnet_local = PyTorchBaseNetwork(local_checkpoint)
+        self.qnet_delayer = PyTorchBaseNetwork(delayer_checkpoint)
 
 
 

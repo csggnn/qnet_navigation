@@ -15,29 +15,52 @@ class QAgent:
 
     """
 
-    def __init__(self, state_space, action_space, layers=[100, 100], mem_size = 1000):
+    def __init__(self, state_space, action_space, layers=[100, 100], mem_size = 1000, double_qnet=False, use_delayer=False):
         self.mem = ExperienceReplayer(mem_size)
+        # discount factor for predicted cumulative reward
         self.gamma = 0.95
+
         self.state_space = state_space
         self.action_space = action_space
-        # The local network is updated at every steps, but its evolution is not immediately used in selecting actions.
+
+        # Double qnet adresses the problem of optimistic cumulative reward prediction in Q-learning. As the expected
+        # reward in simple qnet is set as the maximum action value, and as action values are not accurate during
+        # training, predicted reward is systematically overestimated. Double qnet solves this problem by selecting the
+        # best action for reward prediction on a network and getting the action value from a different network.
+        self.double_qnet = double_qnet
+
+        # The local network is the main network of the QAgent: it is the only network which undergoes training
+        # training and the network which the agent actually uses to explore the environment.
         # In Double DQN, the local network is also used to extract action values used for updates, although the actual
         # actions are selected depending on the target network.
         self.qnet_local = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = layers, output_shape=(action_space,))
-        # The agent inspects the environment using the target network to decide on its actions. the target network also
-        # selects the best action in each state for the pourpose of updating the local network.
+
+        # The QAgent uses the target network only during training, to decide on the action leading to the highest
+        # predicted discounted cumulative reward at each state.
+        # In Simple DQN, the action value at each state is just selected as the max action value values in the Target
+        # network, while in Double DQD the target_network is just used to select the action leading to
+        # the highest expected action value, while the actual value is drawn from the local network.
         self.qnet_target = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = layers, output_shape=(action_space,))
-        # As it is beneficial to have a target network which is different from (delayed w.r.t.) the local network, why
-        # is it okay to have them identical or almost identical just after target network gets updated?
-        # I am introducing a 3rd network, which acts as a buffer between local and target network.
-        # every N learn calls, delayer weigths will be moved to the target network and then local weigths will be copied
-        # over to delayer.
-        # there will thus always be a distance of N to 2*N update calls between qnet_local and qnet_target
-        self.qnet_delayer = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = layers, output_shape=(action_space,))
 
-        self.optimizer = optim.Adam(self.qnet_local.parameters(), lr=0.003)
+        # We do not train the weights of the target networks, we just copy them from the local network with some delay
+        self.qnet_target.eval()
 
-        self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
+        self.use_delayer = use_delayer
+        if self.use_delayer:
+            # As it is beneficial to have a target network which is different from (delayed w.r.t.) the local network, why
+            # is it okay to have them identical or almost identical just after target network gets updated?
+            # As an alternative to soft update, I will try hard update with delay.
+            # The delayer network is a network which acts as a buffer between local and target network. I am implementing a
+            # network for symmetry, but a weight storage would be sufficient.
+            # every N learn calls, delayer weights will be moved to the target network and then local weights will be copied
+            # over to delayer, granting a distance of N to 2*N update calls between qnet_local and qnet_target
+            self.qnet_delayer = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = layers, output_shape=(action_space,))
+
+            self.qnet_delayer.eval()
+
+        self.optimizer = optim.Adam(self.qnet_local.parameters(), lr=0.001)
+
+        self.experience= namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
 
     def act(self, env, eps):
         """ Act on provided environment.
@@ -57,17 +80,23 @@ class QAgent:
                 standardized format.
 
         """
-        state = env.get_state()
-        action=self.select_action(state, eps)
-        next_state, reward, done = env.step(action)
-        self.mem.store(self.experience(state, action, reward, next_state, done))
-        return self.experience(state, action, reward, next_state, done)
+
+        # acting only uses the forward step on the local network, no need of computing gradients.
+        with torch.no_grad():
+            self.qnet_local.eval()
+            state = env.get_state()
+            action=self.select_action(state, eps)
+            next_state, reward, done = env.step(action)
+            exp=self.experience(state, action, reward, next_state, done)
+            self.mem.store(exp)
+            self.qnet_local.train()
+        return exp
 
     def select_action(self, state, eps):
         """ Select an action according to local network """
-        greedy =  np.random.rand()>eps
+        greedy = np.random.rand()>eps
         if greedy:
-            act = np.argmax(self.qnet_target.forward_np(state))
+            act = np.argmax(self.qnet_local.forward_np(state))
         else:
             act = np.random.choice(self.action_space)
         return act
@@ -79,7 +108,6 @@ class QAgent:
         :return:
         """
         experiences = self.mem.draw(batch_size)
-
         if experiences is None:
             return None
 
@@ -89,10 +117,15 @@ class QAgent:
         actions = torch.tensor([exp.action for exp in experiences])
         dones = torch.tensor([exp.done for exp in experiences])
 
+        self.qnet_local.train(True)
         # Double DQN : find max in a network, pick value from the other
 
-        best_actions = np.argmax(self.qnet_local.forward(next_states.float()).detach(), 1).unsqueeze(1)
-        best_actvalues = self.qnet_target.forward(next_states.float()).detach().gather(1, best_actions)
+        #no need of gradients here
+        best_actions = np.argmax(self.qnet_target.forward(next_states.float()).detach(), 1).unsqueeze(1)
+        if self.double_qnet:
+            best_actvalues = self.qnet_local.forward(next_states.float()).detach().gather(1, best_actions)
+        else:
+            best_actvalues = self.qnet_target.forward(next_states.float()).detach().gather(1, best_actions)
 
         target = rewards + self.gamma * (best_actvalues) *(1.0-dones.float())
         current = self.qnet_local.forward(states.float()).gather(1, actions.unsqueeze(1))
@@ -105,10 +138,12 @@ class QAgent:
 
         return loss_curr
 
-
     def update_target(self):
-
-        self.qnet_target.load_state_dict(self.qnet_local.state_dict())
+        if self.use_delayer:
+            self.qnet_delayer.load_state_dict(self.qnet_local.state_dict())
+            self.qnet_target.load_state_dict(self.qnet_delayer.state_dict())
+        else:
+            self.qnet_target.load_state_dict(self.qnet_local.state_dict())
         #self.qnet_target.load_state_dict(self.qnet_delayer.state_dict())
 
     def save_checkpoint(self,  target_checkpoint, local_checkpoint = None, delayer_checkpoint=None):

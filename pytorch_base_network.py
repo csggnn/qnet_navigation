@@ -34,12 +34,12 @@ class PyTorchBaseNetwork(nn.Module):
     layers for the moment.
     """
 
-    version = (0, 5)
+    version = (0, 6)
 
     def __init__(self, input_shape=(784,), conv_layers=None, lin_layers=(128, 64), output_shape=(10,), dropout_p=0):
         """ Network architecture initialization according to linear and convolutional layers features """
         super().__init__()
-
+        self.pars_tuple = namedtuple('pyt_net_pars_tuple', 'input_shape conv_layers lin_layers output_shape dropout_p')
         if isinstance(input_shape, str):
             ckp=input_shape
             saved = torch.load(ckp)
@@ -48,35 +48,30 @@ class PyTorchBaseNetwork(nn.Module):
                     "PyTorchBaseNetwork is now at version " + self.version + " but model was saved at version " + saved[
                         'version'])
             print("loading network " + saved["description"])
-
-            self.initialise(input_shape=saved["input_shape"], conv_layers=saved["conv_layers"],
-                            lin_layers=saved["lin_layers"], output_shape=saved["output_shape"],
-                            dropout_p=saved["dropout_p"])
+            self.pars = self.pars_tuple(**saved["pars"])
+            self.initialise()
             self.load_state_dict(saved["state_dict"])
         else:
-            self.initialise(input_shape=input_shape, conv_layers=conv_layers,
-                            lin_layers=lin_layers, output_shape=output_shape, dropout_p=dropout_p)
+            self.pars = self.pars_tuple(input_shape,conv_layers,lin_layers,output_shape, dropout_p)
+            self.initialise()
 
-    def initialise(self, input_shape=(784,), conv_layers=None, lin_layers=(128, 64), output_shape=(10,), dropout_p=0):
-        self.input_shape=input_shape
-        self.conv_layers=conv_layers
-        self.lin_layers=lin_layers
-        self.output_shape=output_shape
-        self.dropout_p=dropout_p
-        [input_shape, iterable_input] = squeeze_iterable(input_shape)
-        [output_shape, _] = squeeze_iterable(output_shape)
+    def initialise(self):
+        [input_shape, iterable_input] = squeeze_iterable(self.pars.input_shape)
+        [output_shape, _] = squeeze_iterable(self.pars.output_shape)
         self.all_linear_network = not iterable_input
-        self.dropout_p = dropout_p
+        if self.pars.dropout_p>0:
+            self.dropout=nn.Dropout(p=self.pars.dropout_p)
+
         if self.all_linear_network:
-            assert (conv_layers is None)
+            assert (self.pars.conv_layers is None)
             prev_layer_n = input_shape
             self.fc_layers = nn.ModuleList()
-            for curr_layer_n in lin_layers:
+            for curr_layer_n in self.pars.lin_layers:
                 self.fc_layers.append(nn.Linear(prev_layer_n, curr_layer_n))
                 prev_layer_n = curr_layer_n
             self.out_layer = nn.Linear(prev_layer_n, output_shape)
         else:
-            assert (conv_layers is not None)
+            assert (self.pars.conv_layers is not None)
             print("Convolutional Layers not supported for the moment")
 
     def forward(self, x):
@@ -93,8 +88,8 @@ class PyTorchBaseNetwork(nn.Module):
         for fc_layer in self.fc_layers:
             x = fc_layer(x)
             x = tnn_functional.relu(x)
-            if self.dropout_p > 0:
-                x = tnn_functional.dropout(x, p=self.dropout_p)
+            if self.pars.dropout_p > 0:
+                x = self.dropout(x)
         x = self.out_layer(x)
         return x
 
@@ -102,8 +97,7 @@ class PyTorchBaseNetwork(nn.Module):
 
     def save_model(self, checkpoint_file, description=None):
 
-        tosave = {"version": self.version, "input_shape": self.input_shape, "conv_layers": self.conv_layers,
-                  "lin_layers": self.lin_layers, "output_shape": self.output_shape, "dropout_p": self.dropout_p,
+        tosave = {"version": self.version, "pars": self.pars._asdict(),
                   "state_dict": self.state_dict(), "description": description}
         torch.save(tosave, checkpoint_file)
 

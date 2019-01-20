@@ -151,7 +151,8 @@ class QAgent:
         if local_checkpoint is not None:
             self.qnet_local.save_model(local_checkpoint, "q_agent_local_net")
         if delayer_checkpoint is not None:
-            self.qnet_delayer.save_model(delayer_checkpoint, "q_agent_delayer_net")
+            if self.use_delayer:
+                self.qnet_delayer.save_model(delayer_checkpoint, "q_agent_delayer_net")
 
     def load_checkpoint(self, target_checkpoint, local_checkpoint = None, delayer_checkpoint=None):
         if local_checkpoint is None:

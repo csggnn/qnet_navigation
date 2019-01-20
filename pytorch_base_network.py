@@ -104,7 +104,6 @@ class PyTorchBaseNetwork(nn.Module):
         return x_np
 
     def save_model(self, checkpoint_file, description=None):
-
         tosave = {"version": self.version, "pars": self.pars._asdict(),
                   "state_dict": self.state_dict(), "description": description}
         torch.save(tosave, checkpoint_file)

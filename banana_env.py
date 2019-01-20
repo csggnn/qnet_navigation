@@ -9,7 +9,8 @@ class BananaEnv(DiscreteActonEnv):
     """
     def __init__(self):
         self.env = UnityEnvironment(
-    file_name="/media/csggnn/OS/Users/giann/Projects/courses/reinf_learn_udacity/deep-r-learn/p1_navigation/Banana_Linux/Banana.x86_64")
+    file_name="/media/csggnn/OS/Users/giann/Projects/courses/reinf_learn_udacity/deep-r-learn/p1_navigation/Banana_Linux/Banana.x86_64",
+        no_graphics=True)
         self.brain_name = self.env.brain_names[0]
         self.brain = self.env.brains[self.brain_name]
         self.env_info = self.env.reset(train_mode=True)[self.brain_name]

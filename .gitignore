@@ -12,3 +12,5 @@ Navigation\.py
 mod_test\.ckp
 
 *.ckp
+
+test_out/

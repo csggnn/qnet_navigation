@@ -7,6 +7,8 @@ from banana_env import BananaEnv
 from cart_pole_env import CartPoleEnv
 from q_agent import QAgent
 
+import pickle
+
 plt.ion()
 fig = plt.figure()
 ax = fig.add_subplot(111)
@@ -15,10 +17,10 @@ env_sel = "Banana"
 
 if env_sel == "Banana":
     env = BananaEnv()
-    pars = {"layers": [256, 256, 128], "mem_size": 5000, "train_episodes": 4000, "max_ep_len":1000, "update_every":20}
+    pars = {"layers": [128, 64], "mem_size": 5000, "train_episodes": 1200, "max_ep_len":1000, "update_every":2}
 elif env_sel == "CartPole":
     env = CartPoleEnv()
-    pars = {"layers": [128, 128, 64], "mem_size": 2000, "train_episodes": 10000, "max_ep_len":500,"update_every":20}
+    pars = {"layers": [128, 64], "mem_size": 2000, "train_episodes": 10000, "max_ep_len":500,"update_every":2}
 else:
     raise ValueError("specified environment " + env_sel + " does not match any available environment")
 env.reset()
@@ -37,8 +39,8 @@ score_window = deque(maxlen=100)  # last 100 scores
 score_list = []
 running_score = 0
 eps_start = 1.0
-eps_decay = 0.998
-eps_end = 0.001
+eps_decay = 0.995
+eps_end = 0.01
 eps = eps_start
 max_ep_len = pars["max_ep_len"]
 train_episodes = pars["train_episodes"]
@@ -59,7 +61,7 @@ for episode in range(train_episodes):
             agent.learn(64)
     score_list.append(curr_score)
     score_window.append(curr_score)
-    if episode % 100 == 0:
+    if episode % 20 == 0:
         print("Episode " + str(episode) + ". Eps = " + str(eps) + ",  mean_score: " + str(np.mean(score_window)))
         ax.clear()
         ax.plot(np.arange(len(score_list)), score_list)
@@ -67,11 +69,16 @@ for episode in range(train_episodes):
         plt.xlabel('Episode #')
         plt.draw()
         plt.pause(.001)
+        if np.mean(score_window)>13:
+            agent.save_checkpoint(target_checkpoint="qnet_" + env_sel + "_target_episode_" + str(episode) + ".ckp",
+                                  local_checkpoint="qnet_" + env_sel + "_local_episode_" + str(episode) + ".ckp",
+                                  delayer_checkpoint="qnet_" + env_sel + "_delayer_episode_" + str(episode) + ".ckp")
+            pickle.dump(score_list, open( "qnet_" + env_sel + "_scores_" + str(episode) + ".p", "wb"))
 
     if episode % update_every == 0:
         agent.update_target()
     if episode % 2000 == 0:
-        agent.save_checkpoint(target_checkpoint="qnet_" + env_sel + "_target_episode_" + str(episode) + ".ckp")
+        agent.save_checkpoint(local_checkpoint="qnet_" + env_sel + "_local_episode_" + str(episode) + ".ckp")
 
 
 

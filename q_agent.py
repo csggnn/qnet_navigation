@@ -1,9 +1,11 @@
+from collections import namedtuple
+
+import numpy as np
+import torch
+from torch import nn, optim
+
 from experience_replayer import ExperienceReplayer
 from pytorch_base_network import PyTorchBaseNetwork
-import numpy as np
-from collections import namedtuple
-from torch import nn, optim
-import torch
 
 
 class QAgent:
@@ -15,7 +17,8 @@ class QAgent:
 
     """
 
-    def __init__(self, state_space, action_space, layers=[100, 100], mem_size = 1000, double_qnet=False, use_delayer=False):
+    def __init__(self, state_space, action_space, layers=[100, 100], mem_size=1000, double_qnet=False,
+                 use_delayer=False, learning_rate=0.0005):
         self.mem = ExperienceReplayer(mem_size)
         # discount factor for predicted cumulative reward
         self.gamma = 0.95
@@ -33,14 +36,16 @@ class QAgent:
         # training and the network which the agent actually uses to explore the environment.
         # In Double DQN, the local network is also used to extract action values used for updates, although the actual
         # actions are selected depending on the target network.
-        self.qnet_local = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = layers, output_shape=(action_space,))
+        self.qnet_local = PyTorchBaseNetwork(input_shape=(state_space,), lin_layers=layers,
+                                             output_shape=(action_space,))
 
         # The QAgent uses the target network only during training, to decide on the action leading to the highest
         # predicted discounted cumulative reward at each state.
         # In Simple DQN, the action value at each state is just selected as the max action value values in the Target
         # network, while in Double DQD the target_network is just used to select the action leading to
         # the highest expected action value, while the actual value is drawn from the local network.
-        self.qnet_target = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = layers, output_shape=(action_space,))
+        self.qnet_target = PyTorchBaseNetwork(input_shape=(state_space,), lin_layers=layers,
+                                              output_shape=(action_space,))
 
         # We do not train the weights of the target networks, we just copy them from the local network with some delay
         self.qnet_target.eval()
@@ -54,13 +59,14 @@ class QAgent:
             # network for symmetry, but a weight storage would be sufficient.
             # every N learn calls, delayer weights will be moved to the target network and then local weights will be copied
             # over to delayer, granting a distance of N to 2*N update calls between qnet_local and qnet_target
-            self.qnet_delayer = PyTorchBaseNetwork(input_shape = (state_space,),lin_layers = layers, output_shape=(action_space,))
+            self.qnet_delayer = PyTorchBaseNetwork(input_shape=(state_space,), lin_layers=layers,
+                                                   output_shape=(action_space,))
 
             self.qnet_delayer.eval()
 
-        self.optimizer = optim.Adam(self.qnet_local.parameters(), lr=0.001)
+        self.optimizer = optim.Adam(self.qnet_local.parameters(), lr=learning_rate)
 
-        self.experience= namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
+        self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
 
     def act(self, env, eps):
         """ Act on provided environment.
@@ -85,16 +91,16 @@ class QAgent:
         with torch.no_grad():
             self.qnet_local.eval()
             state = env.get_state()
-            action=self.select_action(state, eps)
+            action = self.select_action(state, eps)
             next_state, reward, done = env.step(action)
-            exp=self.experience(state, action, reward, next_state, done)
+            exp = self.experience(state, action, reward, next_state, done)
             self.mem.store(exp)
             self.qnet_local.train()
         return exp
 
     def select_action(self, state, eps):
         """ Select an action according to local network """
-        greedy = np.random.rand()>eps
+        greedy = np.random.rand() > eps
         if greedy:
             act = np.argmax(self.qnet_local.forward_np(state))
         else:
@@ -111,24 +117,24 @@ class QAgent:
         if experiences is None:
             return None
 
-        next_states = torch.tensor([exp.next_state for exp in experiences])
-        rewards = torch.tensor([exp.reward for exp in experiences])
-        states = torch.tensor([exp.state for exp in experiences])
-        actions = torch.tensor([exp.action for exp in experiences])
-        dones = torch.tensor([exp.done for exp in experiences])
+        next_states = torch.from_numpy(np.vstack([exp.next_state for exp in experiences])).float()
+        rewards = torch.from_numpy(np.vstack([exp.reward for exp in experiences])).float()
+        states = torch.from_numpy(np.vstack([exp.state for exp in experiences])).float()
+        actions = torch.from_numpy(np.vstack([exp.action for exp in experiences])).long()
+        dones = torch.from_numpy(np.vstack([exp.done for exp in experiences]).astype(np.uint8)).float()
 
         self.qnet_local.train(True)
         # Double DQN : find max in a network, pick value from the other
 
-        #no need of gradients here
+        # no need of gradients here
         best_actions = np.argmax(self.qnet_target.forward(next_states.float()).detach(), 1).unsqueeze(1)
         if self.double_qnet:
             best_actvalues = self.qnet_local.forward(next_states.float()).detach().gather(1, best_actions)
         else:
             best_actvalues = self.qnet_target.forward(next_states.float()).detach().gather(1, best_actions)
 
-        target = rewards + self.gamma * (best_actvalues) *(1.0-dones.float())
-        current = self.qnet_local.forward(states.float()).gather(1, actions.unsqueeze(1))
+        target = rewards + self.gamma * (best_actvalues) * (1.0 - dones.float())
+        current = self.qnet_local.forward(states.float()).gather(1, actions)
 
         loss = nn.MSELoss()
         loss_curr = loss(current, target)
@@ -144,25 +150,21 @@ class QAgent:
             self.qnet_target.load_state_dict(self.qnet_delayer.state_dict())
         else:
             self.qnet_target.load_state_dict(self.qnet_local.state_dict())
-        #self.qnet_target.load_state_dict(self.qnet_delayer.state_dict())
+        # self.qnet_target.load_state_dict(self.qnet_delayer.state_dict())
 
-    def save_checkpoint(self,  target_checkpoint, local_checkpoint = None, delayer_checkpoint=None):
-        self.qnet_target.save_model(target_checkpoint, "q_agent_target_net")
-        if local_checkpoint is not None:
-            self.qnet_local.save_model(local_checkpoint, "q_agent_local_net")
+    def save_checkpoint(self, local_checkpoint, target_checkpoint=None, delayer_checkpoint=None):
+        self.qnet_local.save_model(local_checkpoint, "q_agent_local_net")
+        if target_checkpoint is not None:
+            self.qnet_target.save_model(target_checkpoint, "q_agent_target_net")
         if delayer_checkpoint is not None:
-            self.qnet_delayer.save_model(delayer_checkpoint, "q_agent_delayer_net")
+            if self.use_delayer:
+                self.qnet_delayer.save_model(delayer_checkpoint, "q_agent_delayer_net")
 
-    def load_checkpoint(self, target_checkpoint, local_checkpoint = None, delayer_checkpoint=None):
-        if local_checkpoint is None:
-            local_checkpoint=target_checkpoint
+    def load_checkpoint(self, local_checkpoint, target_checkpoint=None, delayer_checkpoint=None):
+        if target_checkpoint is None:
+            target_checkpoint = local_checkpoint
         if delayer_checkpoint is None:
-            delayer_checkpoint=local_checkpoint
+            delayer_checkpoint = target_checkpoint
         self.qnet_target = PyTorchBaseNetwork(target_checkpoint)
         self.qnet_local = PyTorchBaseNetwork(local_checkpoint)
         self.qnet_delayer = PyTorchBaseNetwork(delayer_checkpoint)
-
-
-
-
-

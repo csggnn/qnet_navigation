@@ -111,11 +111,11 @@ class QAgent:
         if experiences is None:
             return None
 
-        next_states = torch.tensor([exp.next_state for exp in experiences])
-        rewards = torch.tensor([exp.reward for exp in experiences])
-        states = torch.tensor([exp.state for exp in experiences])
-        actions = torch.tensor([exp.action for exp in experiences])
-        dones = torch.tensor([exp.done for exp in experiences])
+        next_states = torch.from_numpy(np.vstack([exp.next_state for exp in experiences])).float()
+        rewards = torch.from_numpy(np.vstack([exp.reward for exp in experiences])).float()
+        states = torch.from_numpy(np.vstack([exp.state for exp in experiences])).float()
+        actions = torch.from_numpy(np.vstack([exp.action for exp in experiences])).long()
+        dones = torch.from_numpy(np.vstack([exp.done for exp in experiences]).astype(np.uint8)).float()
 
         self.qnet_local.train(True)
         # Double DQN : find max in a network, pick value from the other
@@ -128,7 +128,7 @@ class QAgent:
             best_actvalues = self.qnet_target.forward(next_states.float()).detach().gather(1, best_actions)
 
         target = rewards + self.gamma * (best_actvalues) *(1.0-dones.float())
-        current = self.qnet_local.forward(states.float()).gather(1, actions.unsqueeze(1))
+        current = self.qnet_local.forward(states.float()).gather(1, actions)
 
         loss = nn.MSELoss()
         loss_curr = loss(current, target)

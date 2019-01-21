@@ -33,7 +33,7 @@ eps_decay_choices = [0.99, 0.995, 0.997]
 double_qnet_choices = [True, False]
 delayer_choices = [True, False]
 
-num_tests = 40
+num_tests = 100
 
 # number of actions
 print('Number of actions:', env.get_action_space_size())
@@ -103,8 +103,8 @@ for test_i in range(num_tests):
             mean_score_list.append(np.mean(score_window))
     print("test completed with scores: "+str(mean_score_list))
 
-    agent.save_checkpoint(local_checkpoint="test_out/qnet_" + env_sel + "_local_test_" + str(test_i) + ".ckp")
-    pickle.dump((score_list, mean_score_list, pars), open("test_out/qnet_" + env_sel + "_scores_and_pars_test_" + str(test_i) + ".p", "wb"))
+    agent.save_checkpoint(local_checkpoint="test_out_3/qnet_" + env_sel + "_local_test_" + str(test_i) + ".ckp")
+    pickle.dump((score_list, mean_score_list, pars), open("test_out_3/qnet_" + env_sel + "_scores_and_pars_test_" + str(test_i) + ".p", "wb"))
 
 
     results.append(max(mean_score_list))

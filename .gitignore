@@ -9,10 +9,6 @@ Banana_Linux/
 
 Navigation\.py
 
-mod_test\.ckp
+test_out
 
-*.ckp
-
-test_out/
-
-test_out_2/
+agent_64_in_action\.mkv

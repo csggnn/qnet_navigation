@@ -31,7 +31,9 @@ print('Number of actions:', env.get_action_space_size())
 print('States look like:', env.get_state())
 print('States have length:', env.get_state_space_size())
 # [50,20,10]
-agent = QAgent(state_space=env.get_state_space_size(), action_space=env.get_action_space_size(), layers=pars["layers"],
+agent = QAgent(state_space=env.get_state_space_size(),
+               action_space=env.get_action_space_size(),
+               layers=pars["layers"],
                mem_size=pars["mem_size"], use_delayer=True)
 env.reset()
 curr_score = 0

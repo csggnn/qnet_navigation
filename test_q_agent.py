@@ -4,10 +4,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from banana_env import BananaEnv
-from cart_pole_env import CartPoleEnv
+from discrete_gym_env import DiscreteGymEnv
 from q_agent import QAgent
 
 import pickle
+from collections import namedtuple
+
 
 plt.ion()
 fig = plt.figure()
@@ -15,51 +17,74 @@ ax = fig.add_subplot(111)
 
 env_sel = "Banana"
 
-if env_sel == "Banana":
-    env = BananaEnv()
-    pars = {"layers": [128, 64], "mem_size": 5000, "train_episodes": 1200, "max_ep_len":1000, "update_every":2}
-elif env_sel == "CartPole":
-    env = CartPoleEnv()
-    pars = {"layers": [128, 64], "mem_size": 2000, "train_episodes": 10000, "max_ep_len":500,"update_every":2}
-else:
-    raise ValueError("specified environment " + env_sel + " does not match any available environment")
-env.reset()
+env_pars_tuple=namedtuple("env_pars", "name target_score n_episodes max_t")
 
-# number of actions
-print('Number of actions:', env.get_action_space_size())
-# examine the state space
-print('States look like:', env.get_state())
-print('States have length:', env.get_state_space_size())
-# [50,20,10]
+
+env_sel = "banana"
+
+
+env_par_dict = {"lunar": env_pars_tuple(name="Lunar Lander", target_score=200, n_episodes=2000, max_t=1000),
+                  "cart": env_pars_tuple(name="Cart Pole", target_score=190, n_episodes=2000, max_t=300),
+                  "banana": env_pars_tuple(name="Banana Collector", target_score=13.5, n_episodes=800, max_t=500)}
+
+if env_sel is "lunar":
+    env = DiscreteGymEnv('LunarLander-v2', 0)
+elif env_sel is "banana":
+    env = BananaEnv(0)
+elif env_sel is "cart":
+    env = DiscreteGymEnv('CartPole-v0', 0)
+else:
+    raise AttributeError("unknown environment selection " + env_sel)
+
+env_pars=env_par_dict[env_sel]
+
+
+state_size = env.get_state_space_size()
+action_size = env.get_action_space_size()
+
+
+#parameters
+layers = [128, 64] #hidden layers of the neural networks
+mem_size = 5000 # capacity of the experience replay buffer, number of experiences
+update_every = 2 # update target network every # episodes
+eps_start = 1.0
+eps_end = 0.01
+eps_decay = 0.99 # for epsilon greedy policy in training
+learn_every = 4 # trigger learning every # actions
+learning_rate=0.0005
+use_delayer=True
+double_qnet=True
+
 agent = QAgent(state_space=env.get_state_space_size(),
                action_space=env.get_action_space_size(),
-               layers=pars["layers"],
-               mem_size=pars["mem_size"], use_delayer=True)
+               layers=layers,
+               mem_size=mem_size,
+               learning_rate=learning_rate,
+               use_delayer=use_delayer,
+               double_qnet=double_qnet)
+#initialize
 env.reset()
 curr_score = 0
 score_window = deque(maxlen=100)  # last 100 scores
 score_list = []
 running_score = 0
-eps_start = 1.0
-eps_decay = 0.995
-eps_end = 0.01
 eps = eps_start
-max_ep_len = pars["max_ep_len"]
-train_episodes = pars["train_episodes"]
-update_every = pars["update_every"]
-for episode in range(train_episodes):
+
+
+for episode in range(env_pars.n_episodes):
     eps = max(eps * eps_decay, eps_end)
     env.reset()
     done = False
     curr_score = 0
     act_i = 0
-    for i in range(max_ep_len):
+    for i in range(env_pars.max_t):
         act_i = act_i + 1
         exp = agent.act(env, eps)
         curr_score = curr_score + exp.reward
         if exp.done:
             break
-        if act_i % 4 == 0:
+        # learn every #learn_every actions
+        if act_i % learn_every == 0:
             agent.learn(64)
     score_list.append(curr_score)
     score_window.append(curr_score)
@@ -71,17 +96,16 @@ for episode in range(train_episodes):
         plt.xlabel('Episode #')
         plt.draw()
         plt.pause(.001)
-        if np.mean(score_window)>13:
+        if np.mean(score_window)>env_pars.target_score:
             agent.save_checkpoint(target_checkpoint="qnet_" + env_sel + "_target_episode_" + str(episode) + ".ckp",
                                   local_checkpoint="qnet_" + env_sel + "_local_episode_" + str(episode) + ".ckp",
                                   delayer_checkpoint="qnet_" + env_sel + "_delayer_episode_" + str(episode) + ".ckp")
             pickle.dump(score_list, open( "qnet_" + env_sel + "_scores_" + str(episode) + ".p", "wb"))
-
+    # update target network every #update_every episodes
     if episode % update_every == 0:
         agent.update_target()
     if episode % 2000 == 0:
         agent.save_checkpoint(local_checkpoint="qnet_" + env_sel + "_local_episode_" + str(episode) + ".ckp")
-
 
 
 agent.save_checkpoint(target_checkpoint="qnet_" + env_sel + "_target_final.ckp")

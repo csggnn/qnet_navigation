@@ -92,7 +92,7 @@ class QAgent:
             self.qnet_local.eval()
             state = env.get_state()
             action = self.select_action(state, eps)
-            next_state, reward, done = env.step(action)
+            next_state, reward, done, _ = env.step(action)
             exp = self.experience(state, action, reward, next_state, done)
             self.mem.store(exp)
             self.qnet_local.train()

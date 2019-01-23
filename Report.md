@@ -182,10 +182,8 @@ A plot of the reward cumulated during training is shown below.
 
 [Here](https://youtu.be/L3VQbwDsEB4) is a video of my trained agent in action 
 
-<iframe width="500" height="500" src="https://www.youtube.com/embed/L3VQbwDsEB4" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
 The 5 best scoring agents can be seen in action using solution.py. The top_configs folders includes the related weights, 
-configuration and training scores.
+configuration and training scores for these 5 trained Q-Nets.
 
 ### Future Work
 
@@ -195,4 +193,3 @@ The project has developed with the idea of being able to extend it in the future
  - The PytorchBaseNetwork class supports dropout, linear layers and a stub for the addition of convolutional layers.
  - The DiscreteActionEnv interface class eases the development of environment wrappers, so that the new envorimnents 
   can be easily tested.
-  

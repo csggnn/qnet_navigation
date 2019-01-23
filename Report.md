@@ -182,11 +182,10 @@ A plot of the reward cumulated during training is shown below.
 
 [Here](https://youtu.be/L3VQbwDsEB4) is a video of my trained agent in action 
 
-![[trained_agent_test_64](https://img.youtube.com/vi/L3VQbwDsEB4/0.jpg)](http://www.youtube.com/watch?v=L3VQbwDsEB4)
+<iframe width="500" height="500" src="https://www.youtube.com/embed/L3VQbwDsEB4" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 The 5 best scoring agents can be seen in action using solution.py. The top_configs folders includes the related weights, 
 configuration and training scores.
-
 
 ### Future Work
 

@@ -1,13 +1,13 @@
 ## Udacity Deep Reinforcement Learning Nanodegree
 # Navigation Project Report
 
-###Learning Algorithm
+### Learning Algorithm
 
 A Deep Q-Network has been implemented to solve the project according to [the paper on deep q network]. The following is 
 a short overview of Deep Q-Networks and its building blocks. For a more detailed description please refer to the 
 orignial papers []
 
-####Short overview of Deep Q-Networks
+#### Short overview of Deep Q-Networks
 
 In reinforcement learning, an **Agent** interacts with an **environment** by taking **actions**. Every time agent takes 
 a new action, its **state** (or state observation) is updated and a (possibly 0) **reward** is collected.
@@ -51,9 +51,9 @@ Q-function and to associate an expected cumulative reward to each possible state
 A **Q-Network** implements this function approximation by means of a **(Deep) Neural Network**.
 
 
-###Implementation
+### Implementation
 
-####Preliminary notes 
+#### Preliminary notes 
 
 The main pourpose of this project is to understand get hands-on experience with the pyTorch library and with Deep 
 Q-Networks and its variants. To get the most out of this assignment, I thought it better to start developing my 
@@ -63,7 +63,7 @@ stage of the project.
 For this reason, my implementation may deviate form the implementation proposed in the DQN solution and some of my 
 implementations choices may be less effective or less intuitive than the solution design.
 
-####Project structure
+#### Project structure
 
 
  - **solution.py** loads and uses the trained DQN agent solving the BananaCollection environment.
@@ -92,7 +92,7 @@ implementations choices may be less effective or less intuitive than the solutio
     priority. A simple test file is also provided.
  - **param_optim.py** is a random parameter optimization script used to tests several parameter configurations.
 
-####Modification: Delayer network
+#### Modification: Delayer network
 
 Following the description of [], a local network is trained and used for interacting with the environment, while a 
 target network is used as a reference in training, for cumputing the action values used for updating the 
@@ -121,7 +121,7 @@ The delayer network can be enabled via a parameter in the QAgent constructor.
 I do not claim this modification to provide any significant improvement in performance, I have mainly implemented it as 
 an exercise.
 
-####Parameter tuning
+### Parameter tuning
 
 A 100-tests random optimization has been run to try to better understand the impact of the different parameters on the 
 network performance. The list of parameters and the 10 best results can be seen in table:
@@ -172,13 +172,17 @@ weigth update speeds)
 - The use of a __delayer__ network seems to give a general positive contribution to overall performance. Far more data
 would be needed to confirm this.  
 
-For my delivery, I will select the configuration of test_64, which scored the second best result and solved the 
-environment in 400 epochs. The reward for  test_64 is plotted below
+###Results
+
+As my final network configuration, I will select the newrork corresponding configuration of test_64 in the oprimzation
+set. This network solved the BananaCollection environment in 400 episodes and reached scores beyond 15 in 600 episodes.
+A plot of the reward cumulated during training is shown below.
+
+![optimizaton test 64 score](score_from_optim_test_64.png)
 
 
-[optimizaton test 64 score](score_from_optim_test_64.png)
 
-####Future Work
+### Future Work
 
 The project has developed with the idea of being able to extend it in the future.
  - The ExperienceReplayer class supports priority values and priority sampling, enabling to implement prioritized 

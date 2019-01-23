@@ -172,7 +172,7 @@ weigth update speeds)
 - The use of a __delayer__ network seems to give a general positive contribution to overall performance. Far more data
 would be needed to confirm this.  
 
-###Results
+### Results
 
 As my final network configuration, I will select the newrork corresponding configuration of test_64 in the oprimzation
 set. This network solved the BananaCollection environment in 400 episodes and reached scores beyond 15 in 600 episodes.
@@ -180,6 +180,12 @@ A plot of the reward cumulated during training is shown below.
 
 ![optimizaton test 64 score](score_from_optim_test_64.png)
 
+[Here](https://youtu.be/L3VQbwDsEB4) is a video of my trained agent in action 
+
+![[trained_agent_test_64](https://img.youtube.com/vi/L3VQbwDsEB4/0.jpg)](http://www.youtube.com/watch?v=L3VQbwDsEB4)
+
+The 5 best scoring agents can be seen in action using solution.py. The top_configs folders includes the related weights, 
+configuration and training scores.
 
 
 ### Future Work

@@ -7,10 +7,10 @@ class BananaEnv(DiscreteActonEnv):
     defines basic method so that i can substitute the banana environment with any other environment with continuous
     state space and discrete actions (and may relax this constraint in the future)
     """
-    def __init__(self):
+    def __init__(self, no_graphics=False):
         self.env = UnityEnvironment(
     file_name="/media/csggnn/OS/Users/giann/Projects/courses/reinf_learn_udacity/deep-r-learn/p1_navigation/Banana_Linux/Banana.x86_64",
-        no_graphics=True)
+        no_graphics=no_graphics)
         self.brain_name = self.env.brain_names[0]
         self.brain = self.env.brains[self.brain_name]
         self.env_info = self.env.reset(train_mode=True)[self.brain_name]

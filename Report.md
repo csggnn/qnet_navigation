@@ -121,6 +121,63 @@ The delayer network can be enabled via a parameter in the QAgent constructor.
 I do not claim this modification to provide any significant improvement in performance, I have mainly implemented it as 
 an exercise.
 
+####Parameter tuning
+
+A 100-tests random optimization has been run to try to better understand the impact of the different parameters on the 
+network performance. The list of parameters and the 10 best results can be seen in table:
+ 
+|file_name|best_score|pass_epoch|layers    |mem_size|update_every|learn_every|learn_rate|eps_decay|double_qnet|delayer|
+|---------|----------|----------|----------|-----   |----------- |-----------|------   |-----    |-----      |-------|
+|test_7.p |   15.96  |       500|[64,64]   |20000   |2           |16         |0.0005   |0.99     |False      |True   |                                            
+|test_64.p|   15.14  |       400|[128,64]  |20000   |2           | 4         |0.0005   |0.99     |True       |True   |                                            
+|test_53.p|   14.86  |       700|[64,64]   |5000    |2           | 8         |0.001    |0.995    |False      |True   |                                             
+|test_34.p|   14.82  |       400|[32,32,32]|20000   |5           | 4         |0.001    |0.99     |True       |True   |                                          
+|test_28.p|   14.82  |       600|[128,64]  |20000   |1           | 4         |0.0002   |0.99     |True       |False  |                                            
+|test_72.p|   14.68  |       400|[64,64]   |20000   |5           | 4         |0.0005   |0.99     |False      |True   |                                            
+|test_8.p |   14.53  |       500|[64,64]   |20000   |1           | 4         |0.0002   |0.99     |True       |False  |                                              
+|test_58.p|   14.38  |       500|[32,32]   |5000    |2           | 4         |0.001    |0.99     |True       |True   |                                                
+|test_94.p|   14.33  |       600|[32,32,32]|20000   |5           | 2         |0.0002   |0.995    |False      |False  |                                       
+|test_41.p|   14.3   |       400|[32,32,32]|20000   |5           |16         |0.001    |0.99     |False      |True   |        
+
+As a exercise, I will try to drive some conclusions from these results. A far larger test set would be needed to drive 
+reliable conclusions on the impact of parameters of performance.                                                                                         
+ - Result in the table are sorted by __best_score__: max average score observed over 100 epochs.
+ - __pass_epoch__ column indicates the number of epochs taken by the algorithm to solve the environment. The environment 
+is solved if the average cumulative reward in the last 100 episodes is higher than 13. Passing is checked at 100
+epochs intervals, and the epoch number reported in table corresponding to the end of the averaged period 
+(the score may have increased during the 100 episodes). 
+- Networks with 2 and 3 hidden __layers__ have been tested. The most complex configuration [256, 128] was never selected 
+ among the 10 highest scoring networks, possibly this hidden layer size would lead to overfitting.
+- Best results seems to be obtained with larger memory size for experience replay. __mem_size__ values of 200 and 1000 were 
+also tested but scored poorly. This confirms that experience replay is a fundamental building block for dqnet
+- __update_every__ sets the interval in epochs between updates of the target network. weights are copied from the local   
+ network or from the delayer network when __delayer__ is activated. The value of 10 was also tested but is not among the 
+ top 10
+- __learn_every__ sets the interval in actions between subsequent training call. The batch_size for training is fixed 
+to 64. Although the value of 4 is prevalent, value of 1 was also tested but is not among the top 10
+- __learn_rate__ takes all the values in its range. The local network weight update speed depends mainly on __learn_every__
+(how often the network learns) and __learn_rate__ (how much its weights are updated as a result of learning. 
+As expected, high __learn_every__ values [8,16] score high with medium-high __learn_rate__ [0.0005 0.001] while the 
+lowest learning rate scores in the top ten only with small learning intervals. (these combination correspond to similar 
+weigth update speeds) 
+-__eps_decay__ defines how quickly the initally random policy of the actor changes to a greedy policy. When an environment 
+ has been toroughly explored and no further learning is required, low values of epsilon should be used to maximize 
+ the cumulative reward. On the other hand, a higher value of epsilon is needed during exploration and leaarning.
+ The best scoring configurations solve the environment in less than 400 episodes, this matches epsilon reaching its 
+ nominal value of 0.01 in 450 episodes with __eps_decay__ 0.99. Higher __eps_decay__ values would have the environment 
+ learn for too long, collecting wrose reward values, while lower __eps_decay__ values would break exploration too early
+ and prevent from finding an optimal policy.
+- The performance of the network seems independent form the use of the __double_qnet__ algorithm. The algorithm does not 
+ guarantee a performance improvement in all environments, as reported in the paper, so this may be possible.
+- The use of a __delayer__ network seems to give a general positive contribution to overall performance. Far more data
+would be needed to confirm this.  
+
+For my delivery, I will select the configuration of test_64, which scored the second best result and solved the 
+environment in 400 epochs. The reward for  test_64 is plotted below
+
+
+[optimizaton test 64 score](score_from_optim_test_64.png)
+
 ####Future Work
 
 The project has developed with the idea of being able to extend it in the future.

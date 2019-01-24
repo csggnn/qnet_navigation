@@ -14,7 +14,7 @@ description please refer to the orignial paper, or if you want to dig deeper int
 In reinforcement learning, an **Agent** interacts with an **environment** by taking **actions**. Every time agent takes 
 a new action, its **state** (or state observation) is updated and a (possibly 0) **reward** is collected.
  
-Actions are selected by an agent depending on its state according to a policy. 
+Actions are selected by an agent depending on its state according to a **policy**. 
 **Q-Learning** is a reinforcement learning algorithm according to which an **optimal policy** is searched by iteratively 
 interacting with an environment and updating an **action value function** (Q-function). 
 
@@ -39,19 +39,39 @@ This new estimation is the sum 2 elements:
 - the current collected reward **R**
 - the future estimated reward **G** which can be collected using an optimal policy to interact with the environment 
 
-The future cumulative reward **G** is estimated form the current estimated Q-function as the highest action value among 
-the set of possible actions at state **S_{n+1}**
+The future cumulative reward **G** is estimated form the current estimated Q-function as the **highest action value** among 
+the set of possible actions available at state **S_{n+1}**. This update is actually independent from the plolicy that 
+the agent is using to interact with the environent. 
 
-The Q-learning algorithm gradually updates the extimated action values for states and actions **Q{S_{n}, A}** with this 
-new immediate reward **R** and the estimation of the future cumulative rewards **G**.
+Using the Q-learning algorithm the agent at state **S_{n+1}** (and before taking action **A_{n+1}**) can thus gradually update the extimated action values for states and actions **Q{S_{n}, A}** with the
+sum of the immediate reward **R** and the estimation of the future cumulative rewards **G**.
 
 In the case of **finite discrete state and action spaces**, the Q-function in Q-Learning can be easily represented with a 
-table associating to each State-Action pair an estimated cumulative reward. 
+table associating to each State-Action pair an estimated cumulative reward which is gratually updated.
 
 In the case of a **continuous state space**, (noninear) **function approximation** can be used to represent the 
 Q-function and to associate an expected cumulative reward to each possible state in the continuous state space and to each possible action.
 A **Q-Network** implements this function approximation by means of a **(Deep) Neural Network**.
 
+Using Neural networks as a function approximators for Q-Learning is known to lead to unstable convergence. This problem
+is solved in DQN by introducing Experience Replay and a separate Target Network. 
+
+One of the causes of unstability of neural network based approximators applied to reinforcement learning is the 
+correlation between subsequent states and actions. **Experience Replay** adresses this problem by using a buffer of experiences 
+which is filled by the agent at every interaction with the environment and from which the agent can draw random samples when learning.
+An experience is a (**S_{n}**,**A**,**R**,**S_{n+1}**) set which can be used to formulate a new estimation of the Action 
+Value function at state **S** and for action **A**.
+With experience replay, we no longer need to update the **Q** function in the order in which states are visited 
+by the Agent, but training can be decoupled from action.
+
+Another cause of unstability is the fact that, as the mapped nonlinear function typically exhibits some local correlation, 
+updating weights according to an experience related to a previous state may have an impact on the Q value observed at 
+ all other states. To decouple this correlation, DQN uses a separate network, called **Target Network**, which is only used to compute 
+**G** and at each training iteration. The **Target Network** is identical to the **Local Network** (the actual network 
+which is updated at every training iteration an used by the agent to select its actions), but the **Target Network** 
+weights are not gradually updated during training: They are instead copied over periodically from the **Local network**.
+The non-linear functions mapped by the **Target Network**  and the **Local network** 
+will thus in most cases be different, decoupling the correlation which would have lead to instability.        
 
 ### Implementation
 
@@ -68,10 +88,13 @@ implementations choices may be less effective or less intuitive than the solutio
 #### Project structure
 
 
- - **solution.py** loads and uses the trained DQN agent solving the BananaCollection environment.
-    The agent had been trained for less than 700 episodes using test_q_agent.py. 
- - **test_q_agent.py** is the main file used during development the QAgent class implemented in 
+ - **run_trained_DQN_agent.py** loads and uses a trained DQN agent solving the BananaCollection environment. 
+    5 successful agents resulting from optimization and 1 successful agent resulting from seeded training can be 
+    selected and seen in action.
+ - **train_DQN_agent.py** is the main file used during development the QAgent class implemented in 
     q_agent.py and the file used for training the selected DQN agent.
+    This file can be used to retrain the successful agent or to train new agents for the Banana Collection environment 
+    as well as for the CartPole and LunarLanding environemnts.
  - **discrete_action_env.py**, **discrete_action_gym_env.py** and **banana_env.py**: wrappers to the gym and banana collection 
     environments, they have been developed so that the DQNet agent can be run both gym and BananaCollection environments 
     with the same code. 
@@ -206,10 +229,10 @@ The project has developed with the idea of being able to extend it in the future
  - The ExperienceReplayer class supports priority values and priority sampling, enabling to implement prioritized 
  experience replay in the future.
  - The PytorchBaseNetwork class supports dropout, linear layers and a stub for the addition of convolutional layers. 
- Other architechture could be experimented for different environments.
+ Other architechture could be experimented for mode complex environments.
  - The DiscreteActionEnv interface class eases the development of environment wrappers, so that the new envorimnents 
   can be easily tested.
-Several features found in the original solution of the DQN exercise could be ported to this project, this has not been done just 
-not to accumulate further delay but should be done if the code is to be used in the future.
  - The code does not currently support GPU, this should be added.
+ - A wider optimization session could be run to get reliable performance results and drive reliable conclusions on good 
+ and bad architechtures for solving this environment
  

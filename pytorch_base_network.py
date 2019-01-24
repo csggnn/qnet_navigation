@@ -36,9 +36,11 @@ class PyTorchBaseNetwork(nn.Module):
 
     version = (0, 6)
 
-    def __init__(self, input_shape=(784,), conv_layers=None, lin_layers=(128, 64), output_shape=(10,), dropout_p=0):
+    def __init__(self, input_shape=(784,), conv_layers=None, lin_layers=(128, 64), output_shape=(10,), dropout_p=0, seed=None):
         """ Network architecture initialization according to linear and convolutional layers features """
         super().__init__()
+        if seed is not None:
+            self.seed=torch.manual_seed(seed)
         self.pars_tuple = namedtuple('pyt_net_pars_tuple', 'input_shape conv_layers lin_layers output_shape dropout_p')
         if isinstance(input_shape, str):
             ckp=input_shape

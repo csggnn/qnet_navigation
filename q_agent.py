@@ -3,7 +3,7 @@ from collections import namedtuple
 import numpy as np
 import torch
 from torch import nn, optim
-
+import random
 from experience_replayer import ExperienceReplayer
 from pytorch_base_network import PyTorchBaseNetwork
 
@@ -18,10 +18,12 @@ class QAgent:
     """
 
     def __init__(self, state_space, action_space, layers=[100, 100], mem_size=1000, double_qnet=False,
-                 use_delayer=False, learning_rate=0.0005):
-        self.mem = ExperienceReplayer(mem_size)
+                 use_delayer=False, learning_rate=0.0005, seed=None):
+        self.seed = np.random.seed(seed)
+        self.mem = ExperienceReplayer(mem_size, seed=seed)
         # discount factor for predicted cumulative reward
         self.gamma = 0.95
+
 
         self.state_space = state_space
         self.action_space = action_space
@@ -37,7 +39,7 @@ class QAgent:
         # In Double DQN, the local network is also used to extract action values used for updates, although the actual
         # actions are selected depending on the target network.
         self.qnet_local = PyTorchBaseNetwork(input_shape=(state_space,), lin_layers=layers,
-                                             output_shape=(action_space,))
+                                             output_shape=(action_space,), seed=seed)
 
         # The QAgent uses the target network only during training, to decide on the action leading to the highest
         # predicted discounted cumulative reward at each state.
@@ -45,7 +47,7 @@ class QAgent:
         # network, while in Double DQD the target_network is just used to select the action leading to
         # the highest expected action value, while the actual value is drawn from the local network.
         self.qnet_target = PyTorchBaseNetwork(input_shape=(state_space,), lin_layers=layers,
-                                              output_shape=(action_space,))
+                                              output_shape=(action_space,), seed=seed)
 
         # We do not train the weights of the target networks, we just copy them from the local network with some delay
         self.qnet_target.eval()
@@ -60,7 +62,7 @@ class QAgent:
             # every N learn calls, delayer weights will be moved to the target network and then local weights will be copied
             # over to delayer, granting a distance of N to 2*N update calls between qnet_local and qnet_target
             self.qnet_delayer = PyTorchBaseNetwork(input_shape=(state_space,), lin_layers=layers,
-                                                   output_shape=(action_space,))
+                                                   output_shape=(action_space,), seed=seed)
 
             self.qnet_delayer.eval()
 

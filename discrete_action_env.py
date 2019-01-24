@@ -1,8 +1,9 @@
 class DiscreteActonEnv:
     """
-     Abstract class for a wrapper to an environment with a discrete action space (and a continuous state space)
+     Abstract class for a wrapper to an environment with a discrete action space (and a continuous state space). The
+     interface is meant to match closely the one defined for gym environment.
     """
-    def __init__(self):
+    def __init__(self, seed):
         raise NotImplementedError("Constructor must be implemented")
 
     def get_env(self):
@@ -25,7 +26,13 @@ class DiscreteActonEnv:
 
     def step(self, action):
         raise NotImplementedError(
-            "step() method must be implemented, execute action and return a tuple (new state, reward, done)")
+            "step(action) method must be implemented, execute action and return a tuple (new state, reward, done)")
 
     def close(self):
         raise NotImplementedError("close() method must be implemented")
+
+    def seed(self, seed=None):
+        raise NotImplementedError("seed(seed=None) method must be implemented")
+
+    def render(self):
+        raise NotImplementedError("render() method must be implemented")

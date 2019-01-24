@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from banana_env import BananaEnv
-from cart_pole_env import CartPoleEnv
 from q_agent import QAgent
 
 import pickle
@@ -14,15 +13,8 @@ plt.ion()
 fig = plt.figure()
 ax = fig.add_subplot(111)
 
-env_sel = "Banana"
+env = BananaEnv()
 
-if env_sel == "Banana":
-    env = BananaEnv()
-elif env_sel == "CartPole":
-    env = CartPoleEnv()
-else:
-    raise ValueError("specified environment " + env_sel + " does not match any available environment")
-env.reset()
 
 layers_choices = [[32, 32], [64, 64], [256, 128], [32, 32, 32], [128, 64]]
 mem_size_choices = [200, 1000, 5000, 20000]

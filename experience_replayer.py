@@ -6,7 +6,7 @@ import numpy as np
 class ExperienceReplayer:
     """ data storage for implementing (priorityzed) Experience replay """
 
-    def __init__(self, max_length, default_prio=None, epsilon=0.1):
+    def __init__(self, max_length, default_prio=None, epsilon=0.1, seed=None):
         """ Initialize an ExperienceReplayer object with or without priority
 
         :param max_length: size of the ExperienceReplayer buffer
@@ -16,6 +16,7 @@ class ExperienceReplayer:
                     with epsilon = 1 priorities are ignored, with epsilon = 0 samples are drawn with probabilities
                     proportional to their priority value.
         """
+        self.seed = np.random.seed(seed)
         self.max_length = max_length
         self.memory = deque(maxlen=max_length)
         self.def_prio = default_prio

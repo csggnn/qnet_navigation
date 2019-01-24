@@ -1,7 +1,7 @@
-from cart_pole_env import CartPoleEnv
+from discrete_gym_env import DiscreteGymEnv
 from banana_env import BananaEnv
 
-for env in [CartPoleEnv(), BananaEnv()]:
+for env in [DiscreteGymEnv('CartPole-v0'), BananaEnv()]:
     print("state")
     print(env.get_state())
     print("action_space_size")

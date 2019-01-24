@@ -3,9 +3,11 @@
 
 ### Learning Algorithm
 
-A Deep Q-Network has been implemented to solve the project according to [the paper on deep q network]. The following is 
-a short overview of Deep Q-Networks and its building blocks. For a more detailed description please refer to the 
-orignial papers []
+A Deep Q-Network has been implemented to solve the project according to 
+[Mnih et. al](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf). The following is 
+a short overview of the fundamental building blocks Deep Q-Networks and its building blocks. For a more detailed 
+description please refer to the orignial paper, or if you want to dig deeper into reinforcement learning consider the 
+[Udacity Deep Reinforcement Learning Nanodegree](https://eu.udacity.com/course/deep-reinforcement-learning-nanodegree--nd893).
 
 #### Short overview of Deep Q-Networks
 
@@ -78,7 +80,9 @@ implementations choices may be less effective or less intuitive than the solutio
     A related simple print based test file is provided.
  - **q_agent.py**: QAgent class implementing the Deep Q-Network algorithm. Uses pytorch_base_network.py for its neural 
     network and experience_replayer.py for its experience buffer. 
-    The QAgent can be configured to use the original algorithm in [] or the double QNetwork algorithm in []. 
+    The QAgent can be configured to use the 
+    [original algorithm](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf) or the 
+    [double QNetwork algorithm](https://arxiv.org/abs/1509.06461). 
     The QAgent also exposes a method to save its internal state and configuration to file.
  - **pytorch_base_network.py**: PytorchBaseNetwork neural network class used by  QAgent. The hidden linear 
     configuration can be specified as a list or tuple of integers as an input parameter, and dropout can be optionally
@@ -109,10 +113,11 @@ While this strategy seems reasonable and effective, it must be observed with thi
 only delayed but also temporally smoothed with respect to the local network weights: these smothed weights have never 
 been used  by the local network and could in principle not be effective.
 
-The approach suggested in [], of simply periodically replacing weights, also rise some perplexities. If a target
-network with different weights is indeed needed to [**####**], then we might prefer this condition never to happen, 
-while instead we will have identical local and target networks at regular intervals. This problem is indeed addressed by 
-soft update of target network weights.
+The approach suggested in [Mnih et. al](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf), of simply 
+periodically replacing weights, also rise some perplexities. If a target network with different weights with respect to
+the local network is indeed needed to pervent unstability, then we might prefer the two network never to be identical, 
+while instead with the proposed approach we would have identical local and target networks at regular intervals. 
+This problem is indeed addressed by soft update of target network weights.
 
 In order to have a target network which is always distinct from the local network, while still making sure that the 
 weights of the target network are indeed past weights of the local network, an additional delayer 
@@ -139,8 +144,10 @@ network performance. The list of parameters and the 10 best results can be seen 
 |test_94.p|   14.33  |       600|[32,32,32]|20000   |5           | 2         |0.0002   |0.995    |False      |False  |                                       
 |test_41.p|   14.3   |       400|[32,32,32]|20000   |5           |16         |0.001    |0.99     |False      |True   |        
 
-As a exercise, I will try to drive some conclusions from these results. A far larger test set would be needed to drive 
-reliable conclusions on the impact of parameters of performance.                                                                                         
+The initial network weights and the environment setup is random at every optimization run, and performance in terms of 
+max score and convergence time may depend on this. A far larger test set would be needed to drive reliable conclusions 
+on the impact of parameters of performance, but as a exercise, I will try to drive some conclusions from these results 
+as if a sufficient abount of experiments had been run.                                                       
  - Result in the table are sorted by __best_score__: max average score observed over 100 epochs.
  - __pass_epoch__ column indicates the number of epochs taken by the algorithm to solve the environment. The environment 
 is solved if the average cumulative reward in the last 100 episodes is higher than 13. Passing is checked at 100
@@ -174,7 +181,7 @@ would be needed to confirm this.
 
 ### Results
 
-As my final network configuration, I will select the newrork corresponding configuration of test_64 in the oprimzation
+As my final network configuration, I will select the network corresponding configuration of test_64 in the oprimzation
 set. This network solved the BananaCollection environment in 400 episodes and reached scores beyond 15 in 600 episodes.
 A plot of the reward cumulated during training is shown below.
 
@@ -183,13 +190,26 @@ A plot of the reward cumulated during training is shown below.
 [Here](https://youtu.be/L3VQbwDsEB4) is a video of my trained agent in action 
 
 The 5 best scoring agents can be seen in action using solution.py. The top_configs folders includes the related weights, 
-configuration and training scores for these 5 trained Q-Nets.
+configuration and training scores for these 5 trained Q-Nets. The worst agent can also be selected in the same file.
+
+The optimization run has been performed without seeding. The trained network weights and scores have been saved but a 
+new training on the same parameters would not give the same results. 
+
+A network with the same parameters as test_64 have been trained again, this time seeding the random number generators. 
+The new network solved the enviroment with score > 13.5 in 740 episodes, indicating that performance is indeed quite
+dependent on random initialization and observed scenarios, but that still the selected architecture can consistently 
+solve the environment. A network with these seeded weight can also be selected in solution.py 
 
 ### Future Work
 
 The project has developed with the idea of being able to extend it in the future.
  - The ExperienceReplayer class supports priority values and priority sampling, enabling to implement prioritized 
- experience replay in the future
- - The PytorchBaseNetwork class supports dropout, linear layers and a stub for the addition of convolutional layers.
+ experience replay in the future.
+ - The PytorchBaseNetwork class supports dropout, linear layers and a stub for the addition of convolutional layers. 
+ Other architechture could be experimented for different environments.
  - The DiscreteActionEnv interface class eases the development of environment wrappers, so that the new envorimnents 
   can be easily tested.
+Several features found in the original solution of the DQN exercise could be ported to this project, this has not been done just 
+not to accumulate further delay but should be done if the code is to be used in the future.
+ - The code does not currently support GPU, this should be added.
+ 

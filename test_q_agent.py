@@ -116,6 +116,7 @@ for episode in range(env_pars.n_episodes):
 
 #final print and save
 agent.save_checkpoint(target_checkpoint="qnet_" + env_sel + "_target_final.ckp")
+pickle.dump(score_list, open( "qnet_" + env_sel + "_scores_final.p", "wb"))
 plt.plot(np.arange(len(score_list)), score_list)
 plt.ylabel('Score')
 plt.xlabel('Episode #')
